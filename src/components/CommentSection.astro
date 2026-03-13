@@ -1,0 +1,255 @@
+---
+interface Props {
+  postId: string;
+}
+
+const { postId } = Astro.props;
+const isDev = import.meta.env.DEV && !import.meta.env.POSTGRES_URL;
+---
+
+<section class="comments" id="comments" data-post-id={postId}>
+  <h2>Comments</h2>
+
+  {isDev ? (
+    <p class="comments-dev-notice">Comments are disabled in development (no database configured).</p>
+  ) : (
+    <>
+      <form class="comment-form" id="comment-form">
+        <div class="form-group">
+          <label for="author-name">Name</label>
+          <input type="text" id="author-name" name="authorName" required maxlength="100" placeholder="Your name" />
+        </div>
+        <div class="form-group">
+          <label for="comment-body">Comment</label>
+          <textarea id="comment-body" name="body" required maxlength="5000" rows="4" placeholder="Write a comment..."></textarea>
+        </div>
+        <!-- Honeypot -->
+        <div style="position:absolute;left:-9999px;" aria-hidden="true">
+          <input type="text" name="website" tabindex="-1" autocomplete="off" />
+        </div>
+        <button type="submit" class="submit-btn" id="submit-btn">Post Comment</button>
+        <p class="form-error" id="form-error"></p>
+      </form>
+
+      <div id="comments-list">
+        <p class="comments-loading">Loading comments...</p>
+      </div>
+    </>
+  )}
+</section>
+
+<script>
+  const section = document.querySelector(".comments") as HTMLElement;
+  const postId = section?.dataset.postId;
+  const list = document.getElementById("comments-list");
+  const form = document.getElementById("comment-form") as HTMLFormElement;
+  const formError = document.getElementById("form-error");
+  const submitBtn = document.getElementById("submit-btn") as HTMLButtonElement;
+
+  function escapeHtml(text: string): string {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function timeAgo(dateStr: string): string {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (seconds < 60) return "just now";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  async function loadComments() {
+    if (!list || !postId) return;
+    try {
+      const res = await fetch(`/api/comments?postId=${encodeURIComponent(postId)}`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      const comments = await res.json();
+      if (comments.length === 0) {
+        list.innerHTML = '<p class="comments-empty">No comments yet. Be the first!</p>';
+      } else {
+        list.innerHTML = comments
+          .map(
+            (c: any) => `
+            <div class="comment">
+              <div class="comment-header">
+                <strong>${escapeHtml(c.author_name)}</strong>
+                <span class="comment-date">${timeAgo(c.created_at)}</span>
+              </div>
+              <p class="comment-body">${escapeHtml(c.body)}</p>
+            </div>`
+          )
+          .join("");
+      }
+    } catch {
+      list.innerHTML = '<p class="comments-error">Comments couldn\'t be loaded. Try refreshing.</p>';
+    }
+  }
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!postId || !formError || !submitBtn) return;
+
+    const data = new FormData(form);
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Posting...";
+    formError.textContent = "";
+
+    try {
+      const res = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postId,
+          authorName: data.get("authorName"),
+          body: data.get("body"),
+          website: data.get("website"),
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to post comment");
+      }
+
+      form.reset();
+      await loadComments();
+    } catch (err: any) {
+      formError.textContent = err.message || "Something went wrong. Please try again.";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Post Comment";
+    }
+  });
+
+  loadComments();
+</script>
+
+<style>
+  .comments {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .comments h2 {
+    margin-bottom: 1.5rem;
+  }
+
+  .comments-dev-notice {
+    color: var(--color-muted);
+    font-style: italic;
+    padding: 1rem;
+    background: var(--color-subtle-bg);
+    border-radius: var(--radius);
+  }
+
+  .comment-form {
+    margin-bottom: 2rem;
+    position: relative;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+    color: var(--color-muted);
+  }
+
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-bg);
+    color: var(--color-text);
+    transition: border-color var(--transition);
+  }
+
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+
+  .submit-btn {
+    background: var(--color-accent);
+    color: #fff;
+    border: none;
+    padding: 0.625rem 1.5rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    border-radius: var(--radius);
+    transition: background var(--transition);
+  }
+
+  .submit-btn:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+  }
+
+  .submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .form-error {
+    color: #c0392b;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    min-height: 1.25em;
+  }
+
+  .comments-loading,
+  .comments-empty,
+  .comments-error {
+    color: var(--color-muted);
+    font-size: 0.9375rem;
+    padding: 1rem 0;
+  }
+
+  .comments-error {
+    color: #c0392b;
+  }
+
+  .comment {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .comment:last-child {
+    border-bottom: none;
+  }
+
+  .comment-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .comment-date {
+    font-size: 0.8125rem;
+    color: var(--color-muted);
+  }
+
+  .comment-body {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+</style>

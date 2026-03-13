@@ -1,0 +1,59 @@
+---
+import PageLayout from "@layouts/PageLayout.astro";
+---
+
+<PageLayout title="About" description="About Hari Raman Pokhrel.">
+  <div class="about-content">
+    <div class="about-photo">
+      <img src="/images/hari-portrait.jpg" alt="Hari Raman Pokhrel" />
+    </div>
+    <div class="about-text prose">
+      <p>
+        Hi, I'm Hari Raman Pokhrel. Welcome to my corner of the internet.
+      </p>
+      <p>
+        This blog is a space for me to write about things I'm learning, ideas I'm exploring, and
+        topics I find interesting. I believe in learning in public — sharing thoughts even when
+        they're not fully formed, because that's often when the most interesting conversations happen.
+      </p>
+      <p>
+        When I'm not writing, you'll find me reading, experimenting with new technologies, or
+        thinking out loud (sometimes literally — check out my audio recordings).
+      </p>
+      <p>
+        Feel free to leave a comment on any post. I'd love to hear from you.
+      </p>
+    </div>
+  </div>
+</PageLayout>
+
+<style>
+  .about-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .about-photo {
+    max-width: 280px;
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .about-photo img {
+    width: 100%;
+    border-radius: var(--radius);
+  }
+
+  @media (min-width: 768px) {
+    .about-content {
+      flex-direction: row;
+      gap: 3rem;
+      align-items: flex-start;
+    }
+
+    .about-photo {
+      flex-shrink: 0;
+    }
+  }
+</style>

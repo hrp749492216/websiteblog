@@ -1,0 +1,34 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import TagList from "@components/TagList.astro";
+import { getCollection } from "astro:content";
+
+const allPosts = await getCollection("blog", ({ data }) => !data.draft);
+const tagCounts = new Map<string, number>();
+for (const post of allPosts) {
+  for (const tag of post.data.tags) {
+    tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+  }
+}
+
+const tags = [...tagCounts.entries()]
+  .sort((a, b) => b[1] - a[1])
+  .map(([tag]) => tag);
+---
+
+<BaseLayout title="Tags" description="Browse all tags.">
+  <div class="container tags-page">
+    <h1>Tags</h1>
+    <TagList tags={tags} />
+  </div>
+</BaseLayout>
+
+<style>
+  .tags-page {
+    padding: 2.5rem 0 4rem;
+  }
+
+  .tags-page h1 {
+    margin-bottom: 1.5rem;
+  }
+</style>
