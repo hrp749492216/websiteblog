@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { ensureTable, sql } from "@lib/db";
+import { ensureTable, getComments, addComment } from "@lib/db";
 
 export const prerender = false;
 
@@ -22,12 +22,7 @@ export const GET: APIRoute = async ({ url }) => {
 
   try {
     await ensureTable();
-    const { rows } = await sql`
-      SELECT id, post_id, author_name, body, created_at
-      FROM comments
-      WHERE post_id = ${postId}
-      ORDER BY created_at DESC
-    `;
+    const rows = await getComments(postId);
     return new Response(JSON.stringify(rows), {
       headers: { "Content-Type": "application/json" },
     });
@@ -40,7 +35,7 @@ export const GET: APIRoute = async ({ url }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
+export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
     const { postId, authorName, body: commentBody, website } = body;
@@ -88,8 +83,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       });
     }
 
-    // Rate limiting
-    const ip = clientAddress || "unknown";
+    // Rate limiting by IP from headers
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const lastPost = recentPosts.get(ip);
     if (lastPost && Date.now() - lastPost < RATE_LIMIT_MS) {
       return new Response(JSON.stringify({ error: "Please wait before posting another comment" }), {
@@ -102,10 +97,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const cleanBody = stripHtml(commentBody.trim());
 
     await ensureTable();
-    await sql`
-      INSERT INTO comments (post_id, author_name, body)
-      VALUES (${postId}, ${cleanName}, ${cleanBody})
-    `;
+    await addComment(postId, cleanName, cleanBody);
 
     recentPosts.set(ip, Date.now());
 
