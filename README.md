@@ -1,43 +1,83 @@
-# Astro Starter Kit: Minimal
+# hariramanpokhrel.com.np
 
-```sh
-npm create astro@latest -- --template minimal
+Personal blog built with [Astro](https://astro.build/) — a static-first site with a serverless comment system.
+
+## Architecture
+
+- **Static pages** (SSG): Blog posts, tags, about, home — generated at build time via Astro
+- **Serverless API**: `/api/comments` — Vercel serverless function for reading/writing comments
+- **Database**: Vercel Postgres (Neon) for comment storage and rate limiting
+- **Hosting**: Vercel
+
+## Local Development
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Set up environment variables
+cp .env.example .env
+# Edit .env with your Postgres connection string
+
+# 3. Start dev server
+npm run dev
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+The site runs at `http://localhost:4321`. Comments are disabled in dev mode unless `POSTGRES_URL` is set.
 
-## 🚀 Project Structure
+## Environment Variables
 
-Inside of your Astro project, you'll see the following folders and files:
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `blogpost_POSTGRES_URL` | Yes (prod) | Neon/Vercel Postgres connection string |
+| `POSTGRES_URL` | Fallback | Alternative connection string |
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+## Commands
+
+| Command | Action |
+|---------|--------|
+| `npm run dev` | Start dev server at localhost:4321 |
+| `npm run build` | Build production site to `./dist/` |
+| `npm run preview` | Preview production build locally |
+| `npm run check` | Run Astro type checking |
+| `npm run lint` | Lint source files with Biome |
+| `npm run format` | Format source files with Biome |
+| `npm test` | Run tests with Vitest |
+| `npm run test:watch` | Run tests in watch mode |
+
+## Project Structure
+
+```
+src/
+  components/    # Reusable Astro components
+  content/blog/  # Markdown/MDX blog posts
+  layouts/       # Page layouts (Base, BlogPost, Page)
+  lib/           # Database access layer
+  pages/         # File-based routing
+    api/         # Serverless API endpoints
+    blog/        # Blog listing + individual posts
+    tags/        # Tag listing + filtered views
+  styles/        # Global CSS with design tokens
+  utils/         # Helper functions
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Adding a Blog Post
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+Create a new `.md` or `.mdx` file in `src/content/blog/`:
 
-Any static assets, like images, can be placed in the `public/` directory.
+```markdown
+---
+title: "My Post Title"
+description: "A short description"
+pubDate: 2026-03-31
+tags: ["topic"]
+featured: false
+draft: false
+---
 
-## 🧞 Commands
+Your content here.
+```
 
-All commands are run from the root of the project, from a terminal:
+## Deployment
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Push to `main` — Vercel auto-deploys. Ensure the Postgres database is connected in the Vercel project settings.

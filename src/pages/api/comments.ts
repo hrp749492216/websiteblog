@@ -1,15 +1,27 @@
 import type { APIRoute } from "astro";
-import { ensureTable, getComments, addComment } from "@lib/db";
+import sanitizeHtml from "sanitize-html";
+import { ensureTable, getComments, addComment, checkRateLimit, recordRateLimit } from "@lib/db";
 
 export const prerender = false;
 
-function stripHtml(str: string): string {
-  return str.replace(/<[^>]*>/g, "");
+const RATE_LIMIT_MS = 30_000;
+const ALLOWED_ORIGINS = [
+  "https://hariramanpokhrel.com.np",
+  "http://localhost:4321",
+  "http://localhost:3000",
+];
+
+function getClientIp(request: Request): string {
+  return (
+    request.headers.get("x-real-ip") ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown"
+  );
 }
 
-// Simple in-memory rate limiting: one comment per IP per 30 seconds
-const recentPosts = new Map<string, number>();
-const RATE_LIMIT_MS = 30_000;
+function sanitize(input: string): string {
+  return sanitizeHtml(input, { allowedTags: [], allowedAttributes: {} }).trim();
+}
 
 export const GET: APIRoute = async ({ url }) => {
   const postId = url.searchParams.get("postId");
@@ -27,7 +39,7 @@ export const GET: APIRoute = async ({ url }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("Failed to fetch comments:", e);
+    console.error("Failed to fetch comments:", e instanceof Error ? e.message : String(e));
     return new Response(JSON.stringify({ error: "Failed to fetch comments" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
@@ -36,9 +48,32 @@ export const GET: APIRoute = async ({ url }) => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
+  // CSRF: validate Origin header
+  const origin = request.headers.get("origin");
+  if (origin && !ALLOWED_ORIGINS.some((allowed) => origin.startsWith(allowed))) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  let body: Record<string, unknown>;
   try {
-    const body = await request.json();
-    const { postId, authorName, body: commentBody, website } = body;
+    body = await request.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  try {
+    const { postId, authorName, body: commentBody, website } = body as {
+      postId?: string;
+      authorName?: string;
+      body?: string;
+      website?: string;
+    };
 
     // Honeypot: if filled, silently accept but don't store
     if (website) {
@@ -83,38 +118,38 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Rate limiting by IP from headers
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const lastPost = recentPosts.get(ip);
-    if (lastPost && Date.now() - lastPost < RATE_LIMIT_MS) {
+    // Rate limiting (DB-backed, persists across serverless invocations)
+    const ip = getClientIp(request);
+    await ensureTable();
+    const isLimited = await checkRateLimit(ip, RATE_LIMIT_MS);
+    if (isLimited) {
       return new Response(JSON.stringify({ error: "Please wait before posting another comment" }), {
         status: 429,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    const cleanName = stripHtml(authorName.trim());
-    const cleanBody = stripHtml(commentBody.trim());
+    const cleanName = sanitize(authorName);
+    const cleanBody = sanitize(commentBody);
 
-    await ensureTable();
     await addComment(postId, cleanName, cleanBody);
+    await recordRateLimit(ip);
 
-    recentPosts.set(ip, Date.now());
-
-    // Clean up old rate limit entries periodically
-    if (recentPosts.size > 1000) {
-      const now = Date.now();
-      for (const [key, time] of recentPosts) {
-        if (now - time > RATE_LIMIT_MS) recentPosts.delete(key);
-      }
-    }
+    console.log(
+      JSON.stringify({
+        event: "comment_created",
+        postId,
+        ip,
+        timestamp: new Date().toISOString(),
+      })
+    );
 
     return new Response(JSON.stringify({ success: true }), {
       status: 201,
       headers: { "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("Failed to post comment:", e);
+    console.error("Failed to post comment:", e instanceof Error ? e.message : String(e));
     return new Response(JSON.stringify({ error: "Failed to post comment" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
