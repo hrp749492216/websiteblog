@@ -35,8 +35,21 @@ export const GET: APIRoute = async ({ url }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   try {
+    // Determine client IP: prefer Astro's clientAddress (set by the adapter),
+    // fall back to x-forwarded-for only when clientAddress is unavailable,
+    // and reject the request if neither source provides an identity.
+    const forwardedIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    const ip = clientAddress || forwardedIp;
+
+    if (!ip) {
+      return new Response(
+        JSON.stringify({ error: "Unable to determine client identity" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     const body = await request.json();
     const { postId, authorName, body: commentBody, website } = body;
 
@@ -83,8 +96,6 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Rate limiting by IP from headers
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const lastPost = recentPosts.get(ip);
     if (lastPost && Date.now() - lastPost < RATE_LIMIT_MS) {
       return new Response(JSON.stringify({ error: "Please wait before posting another comment" }), {
