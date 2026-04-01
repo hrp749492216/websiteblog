@@ -11,14 +11,6 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
 ];
 
-function getClientIp(request: Request): string {
-  return (
-    request.headers.get("x-real-ip") ||
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    "unknown"
-  );
-}
-
 function sanitize(input: string): string {
   return sanitizeHtml(input, { allowedTags: [], allowedAttributes: {} }).trim();
 }
@@ -47,7 +39,7 @@ export const GET: APIRoute = async ({ url }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   // CSRF: validate Origin header
   const origin = request.headers.get("origin");
   if (origin && !ALLOWED_ORIGINS.some((allowed) => origin.startsWith(allowed))) {
@@ -74,6 +66,19 @@ export const POST: APIRoute = async ({ request }) => {
       body?: string;
       website?: string;
     };
+
+    // Determine client IP: prefer Astro's clientAddress (set by the adapter),
+    // fall back to x-forwarded-for only when clientAddress is unavailable,
+    // and reject the request if neither source provides an identity.
+    const forwardedIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    const ip = clientAddress || forwardedIp;
+
+    if (!ip) {
+      return new Response(
+        JSON.stringify({ error: "Unable to determine client identity" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
 
     // Honeypot: if filled, silently accept but don't store
     if (website) {
@@ -119,7 +124,6 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Rate limiting (DB-backed, persists across serverless invocations)
-    const ip = getClientIp(request);
     await ensureTable();
     const isLimited = await checkRateLimit(ip, RATE_LIMIT_MS);
     if (isLimited) {
