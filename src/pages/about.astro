@@ -1,11 +1,13 @@
 ---
+import { Image } from "astro:assets";
 import PageLayout from "@layouts/PageLayout.astro";
+import portrait from "../assets/hari-portrait.jpg";
 ---
 
 <PageLayout title="About" description="About Hari Raman Pokhrel.">
   <div class="about-content">
     <div class="about-photo">
-      <img src="/images/hari-portrait.jpg" alt="Hari Raman Pokhrel" width="280" height="280" loading="eager" />
+      <Image src={portrait} alt="Hari Raman Pokhrel" width={280} height={280} loading="eager" />
     </div>
     <div class="about-text prose">
       <p>

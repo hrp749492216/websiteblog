@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import sanitizeHtml from "sanitize-html";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Unit tests for comment API logic (validation, sanitization, CSRF)
 // These test the pure logic without needing a database connection.
@@ -142,7 +142,7 @@ describe("input validation", () => {
         authorName.length <= 100 &&
         body &&
         body.trim().length > 0 &&
-        body.length <= 5000
+        body.length <= 5000,
     ).toBe(true);
   });
 

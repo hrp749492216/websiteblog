@@ -81,3 +81,10 @@ Your content here.
 ## Deployment
 
 Push to `main` — Vercel auto-deploys. Ensure the Postgres database is connected in the Vercel project settings.
+
+### One-time migration
+
+Before first deploy (or after schema changes), run:
+```bash
+blogpost_POSTGRES_URL="postgres://..." npm run migrate
+```

@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { formatDate } from "@utils/date-format";
+import { describe, expect, it } from "vitest";
 
 describe("formatDate()", () => {
   it("formats a date in en-US long format", () => {

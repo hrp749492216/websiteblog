@@ -1,8 +1,14 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
   "files": {
-    "include": ["src/**/*.ts", "src/**/*.astro"],
-    "ignore": ["node_modules", "dist", ".astro", ".vercel"]
+    "includes": [
+      "**/src/**/*.ts",
+      "**/src/**/*.astro",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.astro",
+      "!**/.vercel"
+    ]
   },
   "linter": {
     "enabled": true,
@@ -10,6 +16,10 @@
       "recommended": true,
       "suspicious": {
         "noExplicitAny": "warn"
+      },
+      "correctness": {
+        "noUnusedVariables": "off",
+        "noUnusedImports": "off"
       }
     }
   },

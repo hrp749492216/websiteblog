@@ -1,8 +1,9 @@
 ---
-import BaseLayout from "@layouts/BaseLayout.astro";
+import type { CollectionEntry } from "astro:content";
+import { getCollection } from "astro:content";
 import PostCard from "@components/PostCard.astro";
 import PostGrid from "@components/PostGrid.astro";
-import { getCollection } from "astro:content";
+import BaseLayout from "@layouts/BaseLayout.astro";
 import type { GetStaticPaths } from "astro";
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -23,6 +24,11 @@ export const getStaticPaths: GetStaticPaths = async () => {
     },
   }));
 };
+
+interface Props {
+  tag: string;
+  posts: CollectionEntry<"blog">[];
+}
 
 const { tag, posts } = Astro.props;
 ---

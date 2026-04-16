@@ -6,12 +6,7 @@ interface Props {
   article?: boolean;
 }
 
-const {
-  title,
-  description,
-  image = "/images/og-default.jpg",
-  article = false,
-} = Astro.props;
+const { title, description, image = "/images/og-default.jpg", article = false } = Astro.props;
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 const imageURL = new URL(image, Astro.site);

@@ -1,10 +1,11 @@
-import rss from "@astrojs/rss";
 import { getCollection, render } from "astro:content";
+import rss from "@astrojs/rss";
 import type { APIContext } from "astro";
 
 export async function GET(context: APIContext) {
-  const posts = (await getCollection("blog", ({ data }) => !data.draft))
-    .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+  const posts = (await getCollection("blog", ({ data }) => !data.draft)).sort(
+    (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+  );
 
   const items = await Promise.all(
     posts.map(async (post) => {
@@ -15,13 +16,17 @@ export async function GET(context: APIContext) {
         description: post.data.description,
         link: `/blog/${post.id}/`,
       };
-    })
+    }),
   );
+
+  if (!context.site) {
+    throw new Error("Missing site configuration in astro.config.mjs");
+  }
 
   return rss({
     title: "Hari Raman Pokhrel",
     description: "Thoughts, ideas, and things I'm learning along the way.",
-    site: context.site!,
+    site: context.site,
     items,
   });
 }

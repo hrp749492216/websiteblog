@@ -1,8 +1,9 @@
 ---
-import BaseLayout from "./BaseLayout.astro";
+import { Image } from "astro:assets";
 import CommentSection from "@components/CommentSection.astro";
 import TagList from "@components/TagList.astro";
 import { formatDate } from "@utils/date-format";
+import BaseLayout from "./BaseLayout.astro";
 
 interface Props {
   title: string;
@@ -15,7 +16,8 @@ interface Props {
   slug: string;
 }
 
-const { title, description, pubDate, updatedDate, heroImage, tags, readingTime, slug } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, tags, readingTime, slug } =
+  Astro.props;
 ---
 
 <BaseLayout title={title} description={description} image={heroImage} article>
@@ -45,7 +47,7 @@ const { title, description, pubDate, updatedDate, heroImage, tags, readingTime, 
 
     {heroImage && (
       <div class="hero-image">
-        <img src={heroImage} alt={title} width="720" height="405" loading="eager" />
+        <Image src={heroImage} alt={title} width={1440} height={810} loading="eager" widths={[480, 720, 1080, 1440]} sizes="(max-width: 768px) 100vw, 720px" />
       </div>
     )}
 

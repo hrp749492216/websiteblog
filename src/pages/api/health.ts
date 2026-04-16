@@ -1,5 +1,5 @@
-import type { APIRoute } from "astro";
 import { healthCheck } from "@lib/db";
+import type { APIRoute } from "astro";
 
 export const prerender = false;
 
@@ -9,8 +9,8 @@ export const GET: APIRoute = async () => {
   const status = dbOk ? "ok" : "degraded";
   const httpStatus = dbOk ? 200 : 503;
 
-  return new Response(
-    JSON.stringify({ status, database: dbOk ? "connected" : "unreachable" }),
-    { status: httpStatus, headers: { "Content-Type": "application/json" } }
-  );
+  return new Response(JSON.stringify({ status, database: dbOk ? "connected" : "unreachable" }), {
+    status: httpStatus,
+    headers: { "Content-Type": "application/json" },
+  });
 };

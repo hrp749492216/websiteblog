@@ -1,6 +1,6 @@
+import { addComment, checkRateLimit, ensureTable, getComments, recordRateLimit } from "@lib/db";
 import type { APIRoute } from "astro";
 import sanitizeHtml from "sanitize-html";
-import { ensureTable, getComments, addComment, checkRateLimit, recordRateLimit } from "@lib/db";
 
 export const prerender = false;
 
@@ -25,7 +25,6 @@ export const GET: APIRoute = async ({ url }) => {
   }
 
   try {
-    await ensureTable();
     const rows = await getComments(postId);
     return new Response(JSON.stringify(rows), {
       headers: { "Content-Type": "application/json" },
@@ -60,7 +59,12 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   }
 
   try {
-    const { postId, authorName, body: commentBody, website } = body as {
+    const {
+      postId,
+      authorName,
+      body: commentBody,
+      website,
+    } = body as {
       postId?: string;
       authorName?: string;
       body?: string;
@@ -74,10 +78,10 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const ip = clientAddress || forwardedIp;
 
     if (!ip) {
-      return new Response(
-        JSON.stringify({ error: "Unable to determine client identity" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Unable to determine client identity" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Honeypot: if filled, silently accept but don't store
@@ -124,7 +128,6 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     }
 
     // Rate limiting (DB-backed, persists across serverless invocations)
-    await ensureTable();
     const isLimited = await checkRateLimit(ip, RATE_LIMIT_MS);
     if (isLimited) {
       return new Response(JSON.stringify({ error: "Please wait before posting another comment" }), {
@@ -145,7 +148,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
         postId,
         ip,
         timestamp: new Date().toISOString(),
-      })
+      }),
     );
 
     return new Response(JSON.stringify({ success: true }), {

@@ -1,6 +1,7 @@
 ---
-import BlogPostLayout from "@layouts/BlogPostLayout.astro";
+import type { CollectionEntry } from "astro:content";
 import { getCollection, render } from "astro:content";
+import BlogPostLayout from "@layouts/BlogPostLayout.astro";
 import type { GetStaticPaths } from "astro";
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -10,6 +11,10 @@ export const getStaticPaths: GetStaticPaths = async () => {
     props: { post },
   }));
 };
+
+interface Props {
+  post: CollectionEntry<"blog">;
+}
 
 const { post } = Astro.props;
 const { Content, remarkPluginFrontmatter } = await render(post);
